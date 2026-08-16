@@ -22,7 +22,9 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20.20.2'
+          # cssnano's postcss-merge-longhand uses Set.prototype.isSubsetOf,
+          # only available natively from Node 22 -- Node 20 throws mid-build.
+          node-version: '22'
           cache: npm
 
       - name: Install dependencies
