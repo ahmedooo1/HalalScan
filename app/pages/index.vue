@@ -1,21 +1,29 @@
 <script setup lang="ts">
 import type { HalalVerdict } from '~/composables/useHalalCheck'
-import type { OffProduct } from '~/composables/useOpenFoodFacts'
+import type { FactsDatabase, OffProduct } from '~/composables/useOpenFoodFacts'
 
 type Step = 'scan' | 'lookup' | 'result' | 'ocr' | 'ocr-processing'
 
 const { lookupBarcode } = useOpenFoodFacts()
 const { analyzeIngredients } = useHalalCheck()
 
+const DATABASE_LABELS: Record<FactsDatabase, string> = {
+  openfoodfacts: 'Open Food Facts',
+  openbeautyfacts: 'Open Beauty Facts',
+  openproductsfacts: 'Open Products Facts',
+}
+
 const step = ref<Step>('scan')
 const barcode = ref('')
 const product = ref<OffProduct | null>(null)
 const verdict = ref<HalalVerdict | null>(null)
-const source = ref<'openfoodfacts' | 'photo'>('openfoodfacts')
+const source = ref<FactsDatabase | 'photo'>('openfoodfacts')
 const manualBarcode = ref('')
 const ocrProgress = ref(0)
 const ocrError = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+
+const sourceLabel = computed(() => (source.value === 'photo' ? 'une photo' : DATABASE_LABELS[source.value]))
 
 async function handleDetected(code: string) {
   if (step.value !== 'scan') return
@@ -28,7 +36,7 @@ async function runLookup(code: string) {
   try {
     const result = await lookupBarcode(code)
     product.value = result
-    source.value = 'openfoodfacts'
+    source.value = result.database || 'openfoodfacts'
 
     if (result.found && result.ingredientsText && result.ingredientsText.trim().length > 3) {
       verdict.value = analyzeIngredients(result.ingredientsText)
@@ -155,7 +163,7 @@ const verdictTheme = computed(() => {
       </span>
       <div>
         <p class="font-display text-lg font-semibold text-white">
-          {{ product?.found ? "Pas d'ingrédients listés pour ce produit" : 'Produit non trouvé dans la base' }}
+          {{ product?.found ? "Pas d'ingrédients listés pour ce produit" : 'Produit non trouvé dans les bases' }}
         </p>
         <p class="mt-1 max-w-xs text-sm text-white/50">
           Prends en photo la liste d'ingrédients sur l'emballage pour une analyse directe.
@@ -222,7 +230,7 @@ const verdictTheme = computed(() => {
       </div>
 
       <p class="mt-6 rounded-xl bg-white/5 p-3 text-center text-xs leading-relaxed text-white/40">
-        Analyse automatique basée sur {{ source === 'photo' ? 'une photo' : 'Open Food Facts' }}, pas une certification officielle. En cas de doute, vérifie l'emballage ou contacte le fabricant.
+        Analyse automatique basée sur {{ sourceLabel }}, pas une certification officielle. En cas de doute, vérifie l'emballage ou contacte le fabricant.
       </p>
 
       <button class="focus-ring mt-6 rounded-full bg-lime px-6 py-3.5 text-sm font-bold text-ink" @click="reset">
@@ -233,9 +241,12 @@ const verdictTheme = computed(() => {
     <input ref="fileInput" type="file" accept="image/*" capture="environment" class="hidden" @change="handlePhoto" />
 
     <footer id="a-propos" class="mt-10 border-t border-white/10 pt-5 text-center text-xs leading-relaxed text-white/35">
-      HalalScan croise le code-barres avec la base publique
-      <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" class="underline">Open Food Facts</a>
-      et repère les ingrédients à surveiller. Ce n'est pas un organisme de certification halal : c'est un outil d'aide à la vérification, pas une garantie.
+      HalalScan croise le code-barres avec les bases publiques
+      <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" class="underline">Open Food Facts</a>,
+      <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener" class="underline">Open Beauty Facts</a>
+      et
+      <a href="https://world.openproductsfacts.org" target="_blank" rel="noopener" class="underline">Open Products Facts</a>
+      (alimentaire, cosmétique, autres produits) et repère les ingrédients à surveiller. Ce n'est pas un organisme de certification halal : c'est un outil d'aide à la vérification, pas une garantie.
     </footer>
   </main>
 </template>
