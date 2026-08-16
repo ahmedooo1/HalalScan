@@ -6,6 +6,7 @@ type Step = 'scan' | 'lookup' | 'result' | 'ocr' | 'ocr-processing'
 
 const { lookupBarcode } = useOpenFoodFacts()
 const { analyzeIngredients } = useHalalCheck()
+const { t, locale, setLocale } = useI18n()
 
 const DATABASE_LABELS: Record<FactsDatabase, string> = {
   openfoodfacts: 'Open Food Facts',
@@ -23,7 +24,7 @@ const ocrProgress = ref(0)
 const ocrError = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 
-const sourceLabel = computed(() => (source.value === 'photo' ? 'une photo' : DATABASE_LABELS[source.value]))
+const sourceLabel = computed(() => (source.value === 'photo' ? t('result.sourcePhoto') : DATABASE_LABELS[source.value]))
 
 async function handleDetected(code: string) {
   if (step.value !== 'scan') return
@@ -78,7 +79,7 @@ async function handlePhoto(e: Event) {
     verdict.value = analyzeIngredients(data.text)
     step.value = 'result'
   } catch (err) {
-    ocrError.value = "La lecture du texte a échoué. Réessaie avec une photo plus nette."
+    ocrError.value = t('ocr.error')
     step.value = 'ocr'
   } finally {
     if (fileInput.value) fileInput.value.value = ''
@@ -99,11 +100,11 @@ const verdictTheme = computed(() => {
   if (verdict.value.status === 'flagged') {
     const hasForbidden = verdict.value.flagged.some((f) => f.severity === 'forbidden')
     return hasForbidden
-      ? { color: 'bad', label: 'Ingrédient non-halal détecté', icon: 'x' }
-      : { color: 'warn', label: 'À vérifier', icon: '!' }
+      ? { color: 'bad', label: t('result.nonHalal'), icon: 'x' }
+      : { color: 'warn', label: t('result.toVerify'), icon: '!' }
   }
-  if (verdict.value.status === 'likely_halal') return { color: 'ok', label: 'Rien de suspect trouvé', icon: 'check' }
-  return { color: 'warn', label: 'Ingrédients introuvables', icon: '?' }
+  if (verdict.value.status === 'likely_halal') return { color: 'ok', label: t('result.ok'), icon: 'check' }
+  return { color: 'warn', label: t('result.unknown'), icon: '?' }
 })
 </script>
 
@@ -116,33 +117,53 @@ const verdictTheme = computed(() => {
         </span>
         <span class="font-display text-lg font-semibold text-white">HalalScan</span>
       </div>
-      <a href="#a-propos" class="font-mono text-[11px] uppercase tracking-wide text-white/40 hover:text-white/70">À propos</a>
+      <div class="flex items-center gap-4">
+        <div class="flex items-center rounded-full border border-white/10 p-0.5 font-mono text-[11px] uppercase tracking-wide">
+          <button
+            type="button"
+            class="focus-ring rounded-full px-2.5 py-1 transition"
+            :class="locale === 'fr' ? 'bg-lime text-ink' : 'text-white/50 hover:text-white/80'"
+            @click="setLocale('fr')"
+          >
+            FR
+          </button>
+          <button
+            type="button"
+            class="focus-ring rounded-full px-2.5 py-1 transition"
+            :class="locale === 'ar' ? 'bg-lime text-ink' : 'text-white/50 hover:text-white/80'"
+            @click="setLocale('ar')"
+          >
+            ع
+          </button>
+        </div>
+        <a href="#a-propos" class="font-mono text-[11px] uppercase tracking-wide text-white/40 hover:text-white/70">{{ t('app.about') }}</a>
+      </div>
     </header>
 
     <!-- SCAN -->
     <section v-if="step === 'scan'" class="flex flex-1 flex-col">
       <BarcodeScanner @detected="handleDetected" />
       <p class="mt-4 text-center text-sm text-white/50">
-        Vise le code-barres du produit. Le scan se fait automatiquement.
+        {{ t('scan.aim') }}
       </p>
 
       <div class="mt-6 rounded-2xl border border-white/10 bg-panel p-4">
-        <p class="mb-2 text-xs font-medium text-white/60">Le scan ne marche pas ?</p>
+        <p class="mb-2 text-xs font-medium text-white/60">{{ t('scan.notWorking') }}</p>
         <div class="flex gap-2">
           <input
             v-model="manualBarcode"
             type="text"
             inputmode="numeric"
-            placeholder="Code-barres (ex: 3017620422003)"
+            :placeholder="t('scan.barcodePlaceholder')"
             class="focus-ring min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 font-mono text-sm text-white placeholder:text-white/30"
             @keyup.enter="submitManualBarcode"
           />
           <button class="focus-ring shrink-0 rounded-xl bg-lime px-4 py-2.5 text-sm font-bold text-ink" @click="submitManualBarcode">
-            OK
+            {{ t('scan.ok') }}
           </button>
         </div>
         <button class="mt-3 text-xs text-white/50 underline underline-offset-2 hover:text-white/80" @click="openCameraForPhoto">
-          Ou prendre en photo la liste d'ingrédients directement
+          {{ t('scan.orPhoto') }}
         </button>
       </div>
     </section>
@@ -152,8 +173,8 @@ const verdictTheme = computed(() => {
       <div class="relative flex h-16 w-16 items-center justify-center rounded-full bg-lime/10 text-lime pulse-ring">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="animate-spin"><path d="M12 3a9 9 0 100 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" /></svg>
       </div>
-      <p class="font-mono text-sm text-white/60">Recherche du produit...</p>
-      <p class="font-mono text-xs text-white/30">{{ barcode }}</p>
+      <p class="font-mono text-sm text-white/60">{{ t('lookup.searching') }}</p>
+      <p class="font-mono text-xs text-white/30" dir="ltr">{{ barcode }}</p>
     </section>
 
     <!-- OCR PROMPT (product not found or no ingredients listed) -->
@@ -163,17 +184,17 @@ const verdictTheme = computed(() => {
       </span>
       <div>
         <p class="font-display text-lg font-semibold text-white">
-          {{ product?.found ? "Pas d'ingrédients listés pour ce produit" : 'Produit non trouvé dans les bases' }}
+          {{ product?.found ? t('ocr.noIngredients') : t('ocr.notFound') }}
         </p>
         <p class="mt-1 max-w-xs text-sm text-white/50">
-          Prends en photo la liste d'ingrédients sur l'emballage pour une analyse directe.
+          {{ t('ocr.instruction') }}
         </p>
       </div>
       <p v-if="ocrError" class="text-sm text-bad">{{ ocrError }}</p>
       <button class="focus-ring rounded-full bg-lime px-6 py-3 text-sm font-bold text-ink" @click="openCameraForPhoto">
-        Photographier les ingrédients
+        {{ t('ocr.photograph') }}
       </button>
-      <button class="text-sm text-white/50 underline underline-offset-2" @click="reset">Scanner un autre produit</button>
+      <button class="text-sm text-white/50 underline underline-offset-2" @click="reset">{{ t('ocr.scanAnother') }}</button>
     </section>
 
     <!-- OCR PROCESSING -->
@@ -181,7 +202,7 @@ const verdictTheme = computed(() => {
       <div class="relative flex h-16 w-16 items-center justify-center rounded-full bg-lime/10 text-lime pulse-ring">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="animate-spin"><path d="M12 3a9 9 0 100 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" /></svg>
       </div>
-      <p class="font-mono text-sm text-white/60">Lecture du texte... {{ ocrProgress }}%</p>
+      <p class="font-mono text-sm text-white/60">{{ t('ocrProcessing.reading') }} {{ ocrProgress }}%</p>
     </section>
 
     <!-- RESULT -->
@@ -211,42 +232,42 @@ const verdictTheme = computed(() => {
       </div>
 
       <div v-if="verdict.flagged.length" class="mt-5 space-y-2">
-        <p class="font-mono text-[11px] uppercase tracking-wide text-white/40">Ingrédients relevés</p>
+        <p class="font-mono text-[11px] uppercase tracking-wide text-white/40">{{ t('result.flaggedTitle') }}</p>
         <div
           v-for="(f, i) in verdict.flagged"
           :key="i"
           class="rounded-xl border p-3 text-sm"
           :class="f.severity === 'forbidden' ? 'border-bad/30 bg-bad/5 text-bad' : 'border-warn/30 bg-warn/5 text-warn'"
         >
-          <p class="font-semibold capitalize">{{ f.match }}</p>
-          <p class="mt-0.5 text-white/60">{{ f.reason }}</p>
+          <p class="font-semibold capitalize" dir="ltr">{{ f.match }}</p>
+          <p class="mt-0.5 text-white/60">{{ t(f.reasonKey) }}</p>
         </div>
       </div>
 
       <div v-if="verdict.positiveSignals.length" class="mt-3 space-y-2">
         <div v-for="(f, i) in verdict.positiveSignals" :key="i" class="rounded-xl border border-ok/30 bg-ok/5 p-3 text-sm text-ok">
-          {{ f.reason }}
+          {{ t(f.reasonKey) }}
         </div>
       </div>
 
       <p class="mt-6 rounded-xl bg-white/5 p-3 text-center text-xs leading-relaxed text-white/40">
-        Analyse automatique basée sur {{ sourceLabel }}, pas une certification officielle. En cas de doute, vérifie l'emballage ou contacte le fabricant.
+        {{ t('result.disclaimer', { source: sourceLabel }) }}
       </p>
 
       <button class="focus-ring mt-6 rounded-full bg-lime px-6 py-3.5 text-sm font-bold text-ink" @click="reset">
-        Scanner un autre produit
+        {{ t('result.scanAnother') }}
       </button>
     </section>
 
     <input ref="fileInput" type="file" accept="image/*" capture="environment" class="hidden" @change="handlePhoto" />
 
     <footer id="a-propos" class="mt-10 border-t border-white/10 pt-5 text-center text-xs leading-relaxed text-white/35">
-      HalalScan croise le code-barres avec les bases publiques
+      {{ t('footer.intro') }}
       <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" class="underline">Open Food Facts</a>,
       <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener" class="underline">Open Beauty Facts</a>
-      et
+      {{ t('footer.and') }}
       <a href="https://world.openproductsfacts.org" target="_blank" rel="noopener" class="underline">Open Products Facts</a>
-      (alimentaire, cosmétique, autres produits) et repère les ingrédients à surveiller. Ce n'est pas un organisme de certification halal : c'est un outil d'aide à la vérification, pas une garantie.
+      {{ t('footer.scope') }} {{ t('footer.outro') }}
     </footer>
   </main>
 </template>

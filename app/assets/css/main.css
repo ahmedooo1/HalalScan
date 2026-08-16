@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,6 +6,15 @@
 
 body {
   @apply bg-ink text-white/90 font-body antialiased;
+}
+
+/* Arabic has no italic/mono equivalent for our Latin display/mono faces,
+   so route every role through Noto Sans Arabic when the page is RTL rather
+   than let Latin fonts silently fall back to the browser's default. */
+[dir='rtl'] body,
+[dir='rtl'] .font-display,
+[dir='rtl'] .font-mono {
+  font-family: 'Noto Sans Arabic', sans-serif;
 }
 
 ::selection {

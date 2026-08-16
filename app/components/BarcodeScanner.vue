@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const emit = defineEmits<{ detected: [code: string] }>()
+const { t } = useI18n()
 
 const videoEl = ref<HTMLVideoElement | null>(null)
 const status = ref<'starting' | 'scanning' | 'denied' | 'error'>('starting')
@@ -34,7 +35,7 @@ onMounted(async () => {
       status.value = 'denied'
     } else {
       status.value = 'error'
-      errorMsg.value = err?.message || 'Impossible de démarrer la caméra.'
+      errorMsg.value = err?.message || t('camera.errorDefault')
     }
   }
 })
@@ -59,16 +60,16 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="status === 'starting'" class="absolute inset-0 flex items-center justify-center bg-black/60 text-sm text-white/70">
-      Ouverture de la caméra...
+      {{ t('camera.opening') }}
     </div>
 
     <div v-if="status === 'denied'" class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/85 px-6 text-center text-sm text-white/80">
-      <p class="font-semibold text-white">Accès caméra refusé</p>
-      <p>Autorise la caméra dans les réglages de ton navigateur pour scanner un produit.</p>
+      <p class="font-semibold text-white">{{ t('camera.deniedTitle') }}</p>
+      <p>{{ t('camera.deniedBody') }}</p>
     </div>
 
     <div v-if="status === 'error'" class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/85 px-6 text-center text-sm text-white/80">
-      <p class="font-semibold text-white">Caméra indisponible</p>
+      <p class="font-semibold text-white">{{ t('camera.errorTitle') }}</p>
       <p>{{ errorMsg }}</p>
     </div>
   </div>
