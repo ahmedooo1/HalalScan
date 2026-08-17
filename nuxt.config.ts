@@ -17,6 +17,10 @@ export default defineNuxtConfig({
         },
         { name: 'theme-color', content: '#0B1310' },
       ],
+      link: [
+        { rel: 'manifest', href: '/manifest.webmanifest' },
+        { rel: 'apple-touch-icon', href: '/icon-192.png' },
+      ],
     },
   },
   pwa: {
