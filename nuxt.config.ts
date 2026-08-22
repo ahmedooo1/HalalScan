@@ -16,8 +16,22 @@ export default defineNuxtConfig({
             "Scanne le code-barres d'un produit pour repérer les ingrédients douteux ou non-halal, à partir des données publiques Open Food Facts.",
         },
         { name: 'theme-color', content: '#0B1310' },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:site_name', content: 'HalalScan' },
+        { property: 'og:title', content: 'HalalScan - Vérifie un produit en un scan' },
+        {
+          property: 'og:description',
+          content:
+            "Scanne le code-barres d'un produit pour repérer les ingrédients douteux ou non-halal, à partir des données publiques Open Food Facts.",
+        },
+        { property: 'og:image', content: 'https://halalscan.aaweb.fr/og-image.png' },
+        { property: 'og:url', content: 'https://halalscan.aaweb.fr' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'HalalScan - Vérifie un produit en un scan' },
+        { name: 'twitter:image', content: 'https://halalscan.aaweb.fr/og-image.png' },
       ],
       link: [
+        { rel: 'icon', type: 'image/png', href: '/icon-192.png' },
         { rel: 'manifest', href: '/manifest.webmanifest' },
         { rel: 'apple-touch-icon', href: '/icon-192.png' },
       ],
