@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HalalScan - Hors connexion</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #0B1310;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+  }
+  .wrap {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  svg { color: #A3E635; margin-bottom: 20px; }
+  h1 { font-size: 1.25rem; font-weight: 600; margin: 0 0 8px; }
+  p { color: rgba(255,255,255,0.6); font-size: 0.9rem; max-width: 320px; line-height: 1.5; margin: 0 0 24px; }
+  button {
+    background: #A3E635;
+    color: #0B1310;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 28px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none">
+      <path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+    <h1>Pas de connexion</h1>
+    <p>HalalScan a besoin d'internet pour vérifier un produit. Reconnecte-toi puis réessaie.</p>
+    <button onclick="location.reload()">Réessayer</button>
+  </div>
+</body>
+</html>

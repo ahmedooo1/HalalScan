@@ -42,8 +42,19 @@ export default defineNuxtConfig({
       ],
     },
     workbox: {
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
-      navigateFallback: '/',
+      globPatterns: ['**/*.{js,css,png,svg,ico}', 'offline.html'],
+      navigateFallback: '/offline.html',
+      navigateFallbackDenylist: [/^\/offline\.html$/],
+      runtimeCaching: [
+        {
+          urlPattern: ({ request }) => request.mode === 'navigate',
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'pages',
+            networkTimeoutSeconds: 3,
+          },
+        },
+      ],
     },
     devOptions: {
       enabled: false,
