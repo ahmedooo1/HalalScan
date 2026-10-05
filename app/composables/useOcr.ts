@@ -1,14 +1,53 @@
 // Lecture du texte d'une étiquette photographiée.
 //
-// Le moteur (tesseract.js) et les langues sont servis par le site lui-même
+// Le moteur (tesseract.js) et la langue sont servis par le site lui-même
 // (public/ocr, copiés au build) : aucun CDN externe à joindre.
+// Le moteur est chargé une seule fois, dès que l'écran photo s'affiche
+// (pendant que l'utilisateur cadre l'étiquette), puis gardé pour les photos
+// suivantes. La progression couvre aussi ce chargement, qui peut prendre
+// quelques secondes sur mobile.
+//
 // La photo est préparée avant lecture : orientation de l'appareil respectée,
 // taille ramenée à ce que le moteur lit le mieux, niveaux de gris et
 // contraste renforcé. Une photo de téléphone brute (12 Mpx, couleurs, reflets)
 // donne sinon un texte quasi illisible.
+import type { Worker } from 'tesseract.js'
 
 const LONGEST_SIDE = 2000
 const SHORTEST_SIDE = 1000
+const TIMEOUT_MS = 90_000
+
+// Étapes du moteur et part de la barre de progression qu'elles occupent.
+const STAGES: Record<string, [number, number]> = {
+  'loading tesseract core': [0, 35],
+  'loading language traineddata': [35, 70],
+  'initializing api': [70, 75],
+  'recognizing text': [75, 100],
+}
+
+let onProgress: (percent: number) => void = () => {}
+let workerPromise: Promise<Worker> | null = null
+
+function getWorker(): Promise<Worker> {
+  workerPromise ??= import('tesseract.js')
+    .then(({ createWorker }) =>
+      createWorker('fra', 1, {
+        workerPath: '/ocr/worker.min.js',
+        corePath: '/ocr/core',
+        langPath: '/ocr/lang',
+        logger: (m) => {
+          const stage = STAGES[m.status]
+          if (stage) onProgress(Math.round(stage[0] + (stage[1] - stage[0]) * (m.progress ?? 0)))
+        },
+        errorHandler: (err) => console.error('OCR worker', err),
+      }),
+    )
+    .catch((err) => {
+      workerPromise = null
+      throw err
+    })
+  return workerPromise
+}
 
 async function prepare(file: File): Promise<HTMLCanvasElement> {
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
@@ -49,24 +88,32 @@ async function prepare(file: File): Promise<HTMLCanvasElement> {
 }
 
 export function useOcr() {
-  async function readLabel(file: File, onProgress: (percent: number) => void): Promise<string> {
-    const canvas = await prepare(file)
-    const { createWorker } = await import('tesseract.js')
-    const worker = await createWorker('fra+eng', 1, {
-      workerPath: '/ocr/worker.min.js',
-      corePath: '/ocr/core',
-      langPath: '/ocr/lang',
-      logger: (m) => {
-        if (m.status === 'recognizing text') onProgress(Math.round(m.progress * 100))
-      },
+  /** Lance le chargement du moteur en avance (sans attendre la photo). */
+  function warmUp() {
+    getWorker().catch(() => {})
+  }
+
+  async function readLabel(file: File, progress: (percent: number) => void): Promise<string> {
+    onProgress = progress
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('OCR timeout')), TIMEOUT_MS)
     })
     try {
-      const { data } = await worker.recognize(canvas)
+      const [canvas, worker] = await Promise.race([Promise.all([prepare(file), getWorker()]), timeout])
+      const { data } = await Promise.race([worker.recognize(canvas), timeout])
       return data.text
+    } catch (err) {
+      // Moteur bloqué ou en erreur : on repartira de zéro à la prochaine photo.
+      const stuck = workerPromise
+      workerPromise = null
+      stuck?.then((w) => w.terminate()).catch(() => {})
+      throw err
     } finally {
-      await worker.terminate()
+      clearTimeout(timer)
+      onProgress = () => {}
     }
   }
 
-  return { readLabel }
+  return { warmUp, readLabel }
 }

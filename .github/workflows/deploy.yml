@@ -53,3 +53,16 @@ jobs:
           rsync -az --delete -e "$SSH" .output/public/ "$REMOTE_USER@$HOST:$DEST/"
 
           rm -f ~/.ssh/deploy_key
+
+      - name: Live check
+        run: |
+          set -e
+          SITE=https://halalscan.aaweb.fr
+          curl -fsS "$SITE/" | grep -q 'HalalScan'
+          # Le moteur de lecture de texte doit être servi par le site lui-même.
+          for f in ocr/worker.min.js ocr/core/tesseract-core-simd-lstm.wasm.js ocr/lang/fra.traineddata.gz; do
+            echo "== $f"
+            curl -fsS -o /dev/null -D - "$SITE/$f" | grep -iE '^(HTTP|content-type|content-length|content-encoding|content-security-policy|cache-control)'
+          done
+          echo "== en-têtes de la page"
+          curl -fsS -o /dev/null -D - "$SITE/" | grep -iE '^(content-security-policy|cross-origin)' || echo "(pas de CSP)"

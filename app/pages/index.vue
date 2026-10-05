@@ -6,7 +6,7 @@ type Step = 'scan' | 'lookup' | 'result' | 'ocr' | 'ocr-processing'
 
 const { lookupBarcode } = useOpenFoodFacts()
 const { analyzeIngredients } = useHalalCheck()
-const { readLabel } = useOcr()
+const { warmUp, readLabel } = useOcr()
 const { t, locale, setLocale } = useI18n()
 
 const DATABASE_LABELS: Record<FactsDatabase, string> = {
@@ -24,6 +24,9 @@ const manualBarcode = ref('')
 const ocrProgress = ref(0)
 const ocrError = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+
+// Le moteur de lecture se charge pendant que l'utilisateur cadre sa photo.
+watch(step, (s) => s === 'ocr' && warmUp())
 
 const sourceLabel = computed(() => (source.value === 'photo' ? t('result.sourcePhoto') : DATABASE_LABELS[source.value]))
 
@@ -206,7 +209,7 @@ const verdictTheme = computed(() => {
       <div class="relative flex h-16 w-16 items-center justify-center rounded-full bg-lime/10 text-lime pulse-ring">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="animate-spin"><path d="M12 3a9 9 0 100 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" /></svg>
       </div>
-      <p class="font-mono text-sm text-white/60">{{ t('ocrProcessing.reading') }} {{ ocrProgress }}%</p>
+      <p class="font-mono text-sm text-white/60">{{ ocrProgress < 75 ? t('ocrProcessing.loading') : t('ocrProcessing.reading') }} {{ ocrProgress }}%</p>
     </section>
 
     <!-- RESULT -->

@@ -22,7 +22,6 @@
     "vue-router": "^5.2.0"
   },
   "devDependencies": {
-    "@tesseract.js-data/eng": "^1.0.0",
     "@tesseract.js-data/fra": "^1.0.0",
     "@vite-pwa/nuxt": "^1.1.1"
   }
