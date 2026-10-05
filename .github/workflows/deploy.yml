@@ -66,3 +66,7 @@ jobs:
           done
           echo "== en-têtes de la page"
           curl -fsS -o /dev/null -D - "$SITE/" | grep -iE '^(content-security-policy|cross-origin)' || echo "(pas de CSP)"
+          # La lecture photo compile du WebAssembly : la CSP de nginx doit l'autoriser.
+          if curl -fsS -o /dev/null -D - "$SITE/" | grep -i '^content-security-policy' | grep -vq "wasm-unsafe-eval"; then
+            echo "::warning::La CSP de nginx n'autorise pas 'wasm-unsafe-eval' : la lecture des photos restera bloquée à 0 %."
+          fi
