@@ -49,8 +49,8 @@ function getWorker(): Promise<Worker> {
   return workerPromise
 }
 
-async function prepare(file: File): Promise<HTMLCanvasElement> {
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+async function prepare(photo: Blob): Promise<HTMLCanvasElement> {
+  const bitmap = await createImageBitmap(photo, { imageOrientation: 'from-image' })
   const longest = Math.max(bitmap.width, bitmap.height)
   const shortest = Math.min(bitmap.width, bitmap.height)
   const scale = longest > LONGEST_SIDE ? LONGEST_SIDE / longest : shortest < SHORTEST_SIDE ? Math.min(2, SHORTEST_SIDE / shortest) : 1
@@ -93,14 +93,14 @@ export function useOcr() {
     getWorker().catch(() => {})
   }
 
-  async function readLabel(file: File, progress: (percent: number) => void): Promise<string> {
+  async function readLabel(photo: Blob, progress: (percent: number) => void): Promise<string> {
     onProgress = progress
     let timer: ReturnType<typeof setTimeout> | undefined
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => reject(new Error('OCR timeout')), TIMEOUT_MS)
     })
     try {
-      const [canvas, worker] = await Promise.race([Promise.all([prepare(file), getWorker()]), timeout])
+      const [canvas, worker] = await Promise.race([Promise.all([prepare(photo), getWorker()]), timeout])
       const { data } = await Promise.race([worker.recognize(canvas), timeout])
       return data.text
     } catch (err) {

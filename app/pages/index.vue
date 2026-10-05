@@ -2,7 +2,7 @@
 import type { HalalVerdict } from '~/composables/useHalalCheck'
 import type { FactsDatabase, OffProduct } from '~/composables/useOpenFoodFacts'
 
-type Step = 'scan' | 'lookup' | 'result' | 'ocr' | 'ocr-processing'
+type Step = 'scan' | 'lookup' | 'result' | 'ocr' | 'ocr-camera' | 'ocr-processing'
 
 const { lookupBarcode } = useOpenFoodFacts()
 const { analyzeIngredients } = useHalalCheck()
@@ -26,7 +26,7 @@ const ocrError = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 
 // Le moteur de lecture se charge pendant que l'utilisateur cadre sa photo.
-watch(step, (s) => s === 'ocr' && warmUp())
+watch(step, (s) => s === 'ocr-camera' && warmUp())
 
 const sourceLabel = computed(() => (source.value === 'photo' ? t('result.sourcePhoto') : DATABASE_LABELS[source.value]))
 
@@ -62,19 +62,33 @@ function submitManualBarcode() {
 }
 
 function openCameraForPhoto() {
+  ocrError.value = ''
+  step.value = 'ocr-camera'
+}
+
+function pickFromGallery() {
   fileInput.value?.click()
 }
 
-async function handlePhoto(e: Event) {
+function cameraUnavailable() {
+  ocrError.value = t('ocr.cameraUnavailable')
+  step.value = 'ocr'
+}
+
+function handleFile(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
+  if (fileInput.value) fileInput.value.value = ''
+  if (file) processPhoto(file)
+}
+
+async function processPhoto(photo: Blob) {
   step.value = 'ocr-processing'
   ocrProgress.value = 0
   ocrError.value = ''
   source.value = 'photo'
 
   try {
-    const text = await readLabel(file, (p) => (ocrProgress.value = p))
+    const text = await readLabel(photo, (p) => (ocrProgress.value = p))
     // Sans assez de mots lisibles, on ne conclut pas : un texte vide ou
     // illisible ne doit jamais s'afficher comme « probablement halal ».
     if ((text.match(/\p{L}{3,}/gu) ?? []).length < 4) {
@@ -88,8 +102,6 @@ async function handlePhoto(e: Event) {
     console.error('OCR', err)
     ocrError.value = t('ocr.error')
     step.value = 'ocr'
-  } finally {
-    if (fileInput.value) fileInput.value.value = ''
   }
 }
 
@@ -191,7 +203,7 @@ const verdictTheme = computed(() => {
       </span>
       <div>
         <p class="font-display text-lg font-semibold text-white">
-          {{ product?.found ? t('ocr.noIngredients') : t('ocr.notFound') }}
+          {{ !product ? t('ocr.photograph') : product.found ? t('ocr.noIngredients') : t('ocr.notFound') }}
         </p>
         <p class="mt-1 max-w-xs text-sm text-white/50">
           {{ t('ocr.instruction') }}
@@ -201,7 +213,13 @@ const verdictTheme = computed(() => {
       <button class="focus-ring rounded-full bg-lime px-6 py-3 text-sm font-bold text-ink" @click="openCameraForPhoto">
         {{ t('ocr.photograph') }}
       </button>
+      <button class="text-sm text-white/70 underline underline-offset-2" @click="pickFromGallery">{{ t('ocr.gallery') }}</button>
       <button class="text-sm text-white/50 underline underline-offset-2" @click="reset">{{ t('ocr.scanAnother') }}</button>
+    </section>
+
+    <!-- OCR CAMERA (photo prise dans l'application) -->
+    <section v-else-if="step === 'ocr-camera'" class="pop-in flex flex-1 flex-col">
+      <PhotoCapture @captured="processPhoto" @unavailable="cameraUnavailable" @cancel="step = product ? 'ocr' : 'scan'" />
     </section>
 
     <!-- OCR PROCESSING -->
@@ -266,7 +284,7 @@ const verdictTheme = computed(() => {
       </button>
     </section>
 
-    <input ref="fileInput" type="file" accept="image/*" capture="environment" class="hidden" @change="handlePhoto" />
+    <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="handleFile" />
 
     <footer id="a-propos" class="mt-10 border-t border-white/10 pt-5 text-center text-xs leading-relaxed text-white/35">
       {{ t('footer.intro') }}
