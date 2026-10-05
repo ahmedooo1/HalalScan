@@ -57,9 +57,20 @@ export default defineNuxtConfig({
     },
     workbox: {
       globPatterns: ['**/*.{js,css,png,svg,ico}', 'offline.html'],
+      // Moteur de lecture de texte (15 Mo) : pas téléchargé à l'installation,
+      // seulement à la première photo, puis gardé en cache.
+      globIgnores: ['ocr/**'],
       navigateFallback: '/offline.html',
       navigateFallbackDenylist: [/^\/offline\.html$/],
       runtimeCaching: [
+        {
+          urlPattern: ({ url }) => url.pathname.startsWith('/ocr/'),
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'ocr',
+            expiration: { maxEntries: 10 },
+          },
+        },
         {
           urlPattern: ({ request }) => request.mode === 'navigate',
           handler: 'NetworkFirst',

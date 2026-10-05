@@ -6,6 +6,7 @@ type Step = 'scan' | 'lookup' | 'result' | 'ocr' | 'ocr-processing'
 
 const { lookupBarcode } = useOpenFoodFacts()
 const { analyzeIngredients } = useHalalCheck()
+const { readLabel } = useOcr()
 const { t, locale, setLocale } = useI18n()
 
 const DATABASE_LABELS: Record<FactsDatabase, string> = {
@@ -70,15 +71,18 @@ async function handlePhoto(e: Event) {
   source.value = 'photo'
 
   try {
-    const Tesseract = await import('tesseract.js')
-    const { data } = await Tesseract.recognize(file, 'fra+eng', {
-      logger: (m) => {
-        if (m.status === 'recognizing text') ocrProgress.value = Math.round(m.progress * 100)
-      },
-    })
-    verdict.value = analyzeIngredients(data.text)
+    const text = await readLabel(file, (p) => (ocrProgress.value = p))
+    // Sans assez de mots lisibles, on ne conclut pas : un texte vide ou
+    // illisible ne doit jamais s'afficher comme « probablement halal ».
+    if ((text.match(/\p{L}{3,}/gu) ?? []).length < 4) {
+      ocrError.value = t('ocr.unreadable')
+      step.value = 'ocr'
+      return
+    }
+    verdict.value = analyzeIngredients(text)
     step.value = 'result'
   } catch (err) {
+    console.error('OCR', err)
     ocrError.value = t('ocr.error')
     step.value = 'ocr'
   } finally {
